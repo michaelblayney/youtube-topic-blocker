@@ -36,7 +36,19 @@ const CARD_SELECTORS = [
 ];
 
 const CARD_SELECTOR = CARD_SELECTORS.join(", ");
-
+const PRIMARY_CARD_SELECTORS = [
+  "ytd-rich-item-renderer",
+  "ytd-video-renderer",
+  "ytd-grid-video-renderer",
+  "ytd-compact-video-renderer",
+  "ytd-compact-radio-renderer",
+  "ytd-compact-station-renderer",
+  "ytd-compact-playlist-renderer",
+  "ytd-compact-movie-renderer",
+  "ytd-compact-promoted-video-renderer",
+  "ytd-compact-autoplay-renderer",
+  "ytd-reel-item-renderer"
+];
 const PENDING_STYLE_ID = "ytr-pending-style";
 const UNKNOWN_RETRY_MS = 1400;
 const VIEWPORT_TOP_BUFFER_PX = 120;
@@ -246,7 +258,15 @@ function restoreOriginalTitle(node, original) {
 }
 
 function findCard(node) {
-  return node?.closest?.(CARD_SELECTOR) || null;
+  const cards = getCardAncestors(node);
+  if (!cards.length) return null;
+
+  for (const selector of PRIMARY_CARD_SELECTORS) {
+    const match = cards.find((card) => card.matches?.(selector));
+    if (match) return match;
+  }
+
+  return cards[cards.length - 1] || null;
 }
 function getCardAncestors(node) {
   const cards = [];
@@ -295,7 +315,8 @@ function setCardPending(node, pending) {
   }
 
   if (pending) {
-    cards[0].classList.add("ytr-pending-card");
+    const primary = findCard(node) || cards[0];
+    primary.classList.add("ytr-pending-card");
   }
 }
 
