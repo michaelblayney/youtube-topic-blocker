@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouTube Topic Blocker Options</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>YouTube Topic Blocker</h1>
+      <p>Block mode only. Titles stay hidden until checked by the LLM.</p>
+      <p id="runtimeStatus" class="runtime"></p>
+
+      <section class="statsCard">
+        <h2>Usage</h2>
+        <p id="usageSummary" class="usageSummary"></p>
+        <div class="actions">
+          <button id="refreshStatsBtn" type="button">Refresh usage</button>
+          <button id="resetStatsBtn" type="button" class="secondary">Reset usage</button>
+        </div>
+      </section>
+
+      <label>
+        Blocked topics (comma separated)
+        <textarea id="blockedTopics" rows="3" placeholder="politics, celebrity gossip, crypto"></textarea>
+      </label>
+
+
+      <label>
+        OpenAI API key
+        <input id="openAiApiKey" type="password" placeholder="sk-..." />
+      </label>
+
+      <label>
+        Model
+        <input id="model" type="text" value="gpt-4o-mini" />
+      </label>
+
+      <div class="actions">
+        <button id="saveBtn">Save</button>
+        <span id="status"></span>
+      </div>
+    </main>
+
+    <script src="./options.js"></script>
+  </body>
+</html>
