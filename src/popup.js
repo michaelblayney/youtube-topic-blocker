@@ -3,6 +3,7 @@ const GPT_4O_MINI_PRICING = {
   outputPerMillion: 0.6
 };
 const ESTIMATE_ADJUSTMENT_FACTOR = 0.5;
+const DEFAULT_MODEL = "gpt-4o-mini";
 
 function byId(id) {
   return document.getElementById(id);
@@ -20,6 +21,16 @@ function estimateCostFromTokens(promptTokens, completionTokens) {
   const inCost = (Number(promptTokens || 0) / 1_000_000) * GPT_4O_MINI_PRICING.inputPerMillion;
   const outCost = (Number(completionTokens || 0) / 1_000_000) * GPT_4O_MINI_PRICING.outputPerMillion;
   return (inCost + outCost) * ESTIMATE_ADJUSTMENT_FACTOR;
+}
+
+async function loadModelLabel() {
+  try {
+    const settings = await chrome.storage.sync.get(["model"]);
+    const model = String(settings.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+    byId("spendLabel").textContent = `Estimated Spend | ${model}`;
+  } catch (_err) {
+    byId("spendLabel").textContent = `Estimated Spend | ${DEFAULT_MODEL}`;
+  }
 }
 
 async function loadRuntimeStatus() {
@@ -60,7 +71,7 @@ async function loadUsage() {
 
     const estCost = estimateCostFromTokens(promptTokens, completionTokens);
     byId("estSpend").textContent = formatUsd(estCost);
-    byId("usageLine").textContent = `${formatInt(totalTitles)} titles | ${formatInt(llmCalls)} LLM calls`;
+    byId("usageLine").textContent = `${formatInt(totalTitles)} titles checked | ${formatInt(llmCalls)} LLM calls`;
   } catch (_err) {
     byId("estSpend").textContent = "$0.0000";
     byId("usageLine").textContent = "Usage unavailable";
@@ -68,8 +79,13 @@ async function loadUsage() {
 }
 
 async function refresh() {
-  await Promise.all([loadRuntimeStatus(), loadUsage()]);
+  await Promise.all([loadModelLabel(), loadRuntimeStatus(), loadUsage()]);
+}
+
+function openOptionsPage() {
+  chrome.runtime.openOptionsPage();
 }
 
 byId("refreshBtn").addEventListener("click", refresh);
+byId("openOptionsBtn").addEventListener("click", openOptionsPage);
 refresh();

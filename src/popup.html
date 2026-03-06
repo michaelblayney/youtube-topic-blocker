@@ -11,10 +11,13 @@
       <h1>YouTube Topic Blocker</h1>
       <p id="runtimeStatus" class="runtime"></p>
       <div class="card">
-        <p class="label">Estimated Spend</p>
+        <p id="spendLabel" class="label">Estimated Spend | gpt-4o-mini</p>
         <p id="estSpend" class="value">$0.0000</p>
         <p id="usageLine" class="meta"></p>
-        <button id="refreshBtn" type="button">Refresh</button>
+        <div class="actions">
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="openOptionsBtn" class="secondary" type="button">Options</button>
+        </div>
       </div>
     </main>
     <script src="./popup.js"></script>
