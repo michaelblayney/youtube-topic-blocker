@@ -7,17 +7,14 @@
 </p>
 
 YouTube video card filtering for topic-based content blocking.
-Video metadata stays hidden until classification completes.
-
 
 ## Highlights
 
 - Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
-- Privacy-first presentation: titles and media remain hidden while checks are pending.
-- Visual verification for approved videos (checked marker on safe titles).
+- Titles and media remain hidden while checks are pending.
+- Visual verification for approved videos.
 - Coverage for YouTube Home and Watch-page recommendation surfaces.
 - Usage telemetry in Options (titles processed, LLM calls, token estimates, estimated spend).
-
 
 ## Installation & Configuration
 
@@ -32,7 +29,6 @@ Video metadata stays hidden until classification completes.
 
 > [!NOTE]
 > Model selection is currently fixed to `gpt-4o-mini` in the UI.
-
 
 ## Security and Data Handling
 
