@@ -1,4 +1,7 @@
-# YouTube Content Filter (Chrome Extension)
+<h1>
+  <img src="assets/icons/128.png" alt="YouTube Content Filter icon" width="28" valign="middle" />
+  YouTube Content Filter (Chrome Extension)
+</h1>
 
 <p align="left" style="margin:0;">
   <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-1f6feb?style=for-the-badge">
@@ -40,6 +43,7 @@ YouTube video card filtering for topic-based content blocking.
 - API key is stored in Chrome extension storage on your local profile.
 - Title text is sent to OpenAI for classification.
 - No external backend is required for core operation.
+
 
 
 
