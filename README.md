@@ -1,94 +1,69 @@
-# YouTube Content Filter
+# YouTube Content Filter (Chrome Extension)
+
+<p align="left">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-1f6feb?style=for-the-badge">
+  <img alt="Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white">
+  <img alt="Model" src="https://img.shields.io/badge/model-gpt--4o--mini-16a34a?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/status-active-22c55e?style=for-the-badge">
+</p>
 
 YouTube video card filtering for topic-based content blocking.
 
-This extension hides video metadata until each title is classified, then reveals only content marked safe.
+> [!IMPORTANT]
+> Video metadata stays hidden until classification completes.
+
+## At a Glance
+
+| Area | Status |
+|---|---|
+| Topic Blocking | `Enabled` |
+| Safe-Only Reveal | `Enabled` |
+| Home Feed | `Supported` |
+| Watch Recommendations | `Supported` |
+| Backend Required | `No` |
 
 ## Highlights
 
-- Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
-- Privacy-first presentation flow: titles and media stay hidden while checks are pending.
-- Strict safety posture: uncertain classifications remain hidden (never auto-revealed).
-- Visual verification for approved videos (checked marker on safe titles).
-- Coverage for YouTube Home feed and Watch-page recommendation surfaces.
-- Usage telemetry in Options (titles processed, LLM calls, token estimates, estimated spend).
+- :brain: Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
+- :lock: Privacy-first presentation: titles and media remain hidden while checks are pending.
+- :white_check_mark: Visual verification for approved videos (checked marker on safe titles).
+- :dart: Coverage for YouTube Home and Watch-page recommendation surfaces.
+- :bar_chart: Usage telemetry in Options (titles processed, LLM calls, token estimates, estimated spend).
 
 ## Product Behavior
 
-- `safe`: video stays visible and title is restored.
-- `blocked`: video card is removed from view.
-- `unknown`: video remains in pending/hidden state until retried.
+| Classification | Result |
+|---|---|
+| `safe` | Video stays visible and title is restored |
+| `blocked` | Video card is removed from view |
+| `unknown` | Video remains in pending/hidden state until retried |
 
-This ensures videos are not shown before classification completes.
+This guarantees videos are not shown before they have been checked.
 
-## Architecture
-
-- `src/content.js`: DOM detection, pending masking, and per-title status application.
-- `src/background.js`: classification orchestration, OpenAI calls, throttling, cache, and runtime locks.
-- `src/options.html|css|js`: configuration and usage dashboard.
-- `src/popup.html|css|js`: compact runtime snapshot and quick actions.
-
-## Installation
+## Installation & Configuration
 
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
 4. Select this repository folder.
 5. Open extension **Details** -> **Extension options**.
+6. Enter your OpenAI API key.
+7. Set blocked topics as a comma-separated list.
+8. Save settings.
 
-## Configuration
-
-In the Options page:
-
-1. Enter your OpenAI API key.
-2. Set blocked topics as a comma-separated list.
-3. Save settings.
-
-Model is currently fixed to `gpt-4o-mini` in the UI.
-
-## Runtime and Rate Limits
-
-The extension applies cooldown locks for quota and rate-limit responses from the provider.
-
-- Quota cooldown: long disable window when the API reports quota exhaustion.
-- Rate-limit cooldown: short backoff window when request rate is exceeded.
-
-Status appears in both popup and options when active.
+> [!NOTE]
+> Model selection is currently fixed to `gpt-4o-mini` in the UI.
 
 ## Security and Data Handling
 
-- API key is stored in Chrome extension storage on your local profile.
-- Title text is sent to OpenAI for classification.
-- No external backend is required for core operation.
+- :lock: API key is stored in Chrome extension storage on your local profile.
+- :outbox_tray: Title text is sent to OpenAI for classification.
+- :building_construction: No external backend is required for core operation.
 
-## Local Development
+<details>
+<summary><strong>Quick Usage Tip</strong></summary>
 
-- Reload the extension from `chrome://extensions` after code changes.
-- Use the extension service worker and page consoles for debugging.
-- If you change permissions or manifest fields, reload the unpacked extension.
+Use focused blocked topic lists (3-10 terms) for best precision and cleaner results.
 
-## Repository Structure
+</details>
 
-```text
-.
-|-- manifest.json
-|-- src/
-|   |-- background.js
-|   |-- content.js
-|   |-- options.css
-|   |-- options.html
-|   |-- options.js
-|   |-- popup.css
-|   |-- popup.html
-|   |-- popup.js
-|-- assets/icons/
-```
-
-## Known Scope
-
-- YouTube title-based filtering only (not transcript or comments).
-- Requires valid OpenAI credentials to classify new uncached titles.
-
-## License
-
-Private/internal project unless a separate license file is added.
