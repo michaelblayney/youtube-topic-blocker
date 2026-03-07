@@ -10,7 +10,7 @@ YouTube video card filtering for topic-based content blocking.
 
 
 <p align="center">
-  <img src="assets/extension_example.gif" alt="Extension Demo" width="640" />
+  <img src="assets/extension_example.gif" alt="Extension Demo" width="320" />
 </p>
 
 ## Highlights
