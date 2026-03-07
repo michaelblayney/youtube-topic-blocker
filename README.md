@@ -10,11 +10,9 @@ YouTube video card filtering for topic-based content blocking.
 
 <p align="left">
   &emsp;<img src="assets/extension_example.gif" alt="Extension Demo" width="280" />
-</p>
-
-<p>
   &emsp;<sub>Checks video before displaying. Shows video only if it's not related to any blacklisted topics.</sub>
 </p>
+
 
 ## Highlights
 
