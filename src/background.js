@@ -13,13 +13,15 @@ const API_STATS_KEY = "ytrApiStats";
 
 const QUOTA_DISABLE_MS = 12 * 60 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MS = 25 * 1000;
-const MIN_API_GAP_MS = 1200;
+const MIN_API_GAP_MS = 300;
 
 const classificationCache = new Map();
 let apiChain = Promise.resolve();
 let nextAllowedRequestAt = 0;
 let usageFlushTimer = null;
 let pendingUsageDelta = null;
+let latestSettings = { ...DEFAULT_SETTINGS };
+let settingsReady = false;
 
 function defaultApiStats() {
   return {
@@ -208,12 +210,14 @@ async function clearExpiredRuntimeLocks() {
 async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
-      resolve({
+      latestSettings = {
         ...DEFAULT_SETTINGS,
         ...items,
         mode: "block_only",
         blockedTopics: normalizeTopics(items.blockedTopics)
-      });
+      };
+      settingsReady = true;
+      resolve(latestSettings);
     });
   });
 }
@@ -338,7 +342,7 @@ async function handleBatchClassify(payload) {
 
   queueUsageDelta({ totalRequests: 1, totalTitles: titles.length });
 
-  const settings = await getSettings();
+  const settings = settingsReady ? latestSettings : await getSettings();
   const model = payload.model || settings.model;
   const topics = normalizeTopics(payload.blockedTopics?.length ? payload.blockedTopics : settings.blockedTopics);
 
@@ -445,6 +449,28 @@ async function handleBatchClassify(payload) {
   }
 }
 
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "sync") return;
+
+  if (changes.blockedTopics) {
+    latestSettings.blockedTopics = normalizeTopics(changes.blockedTopics.newValue);
+  }
+  if (changes.model) {
+    latestSettings.model = String(changes.model.newValue || DEFAULT_SETTINGS.model);
+  }
+  if (changes.openAiApiKey) {
+    latestSettings.openAiApiKey = String(changes.openAiApiKey.newValue || "");
+  }
+  if (changes.mode) {
+    latestSettings.mode = "block_only";
+  }
+  settingsReady = true;
+});
+
+getSettings().catch(() => {
+  settingsReady = false;
+});
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "GET_RUNTIME_STATUS") {
     (async () => {
@@ -488,3 +514,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 });
+
+
+
