@@ -1,17 +1,16 @@
 # YouTube Content Filter (Chrome Extension)
 
-<p align="left">
+<p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-1f6feb?style=for-the-badge">
   <img alt="Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white">
   <img alt="Model" src="https://img.shields.io/badge/model-gpt--4o--mini-16a34a?style=for-the-badge">
 </p>
 
-YouTube video card filtering for topic-based content blocking.
-
-
 <p align="center">
   <img src="assets/extension_example.gif" alt="Extension Demo" width="320" />
 </p>
+
+YouTube video card filtering for topic-based content blocking.
 
 ## Highlights
 
