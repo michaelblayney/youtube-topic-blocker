@@ -55,9 +55,19 @@ const UNKNOWN_RETRY_MS = 900;
 const VIEWPORT_TOP_BUFFER_PX = 120;
 const VIEWPORT_BOTTOM_BUFFER_PX = 520;
 const MAX_UNIQUE_TITLES_PER_PASS = 72;
+const HOME_FIRST_PASS_UNIQUE_TITLES = 24;
 const PROCESS_DEBOUNCE_MS = 40;
 const HEARTBEAT_INTERVAL_MS = 700;
 const END_SCREEN_SWEEP_MIN_INTERVAL_MS = 320;
+const PENDING_LABELS = {
+  queued: "Queued for check...",
+  model: "Checking Content...",
+  retry: "Retrying check...",
+  rateLimit: "Rate-limit cooldown...",
+  quota: "Quota cooldown...",
+  noKey: "Add API key in Options...",
+  error: "Retrying after error..."
+};
 
 const processed = new WeakMap();
 
@@ -70,6 +80,8 @@ let processing = false;
 let rerunRequested = false;
 let latestSettings = { ...DEFAULT_SETTINGS };
 let lastEndScreenSweepAt = 0;
+let pageBatchKey = "";
+let pageFirstBatchDone = false;
 
 function normalize(text) {
   return (text || "").replace(/\s+/g, " ").trim();
@@ -87,6 +99,18 @@ function isExtensionContextValid() {
 function isTargetPage() {
   const path = window.location.pathname || "";
   return path === "/" || path.startsWith("/watch");
+}
+
+function getCurrentPageBatchKey() {
+  const path = window.location.pathname || "";
+  return path === "/" ? "/" : path;
+}
+
+function refreshPageBatchState() {
+  const nextKey = getCurrentPageBatchKey();
+  if (nextKey === pageBatchKey) return;
+  pageBatchKey = nextKey;
+  pageFirstBatchDone = false;
 }
 
 function settingsSignature(settings) {
@@ -130,7 +154,7 @@ function ensurePendingStyles() {
       color: transparent !important;
     }
     .ytr-hidden-title::after {
-      content: "Checking Video...";
+      content: attr(data-ytr-pending-label);
       position: absolute;
       left: 0;
       top: 0;
@@ -232,17 +256,35 @@ function setTitleHidden(node, hidden) {
 
   if (hidden) {
     node.classList.add("ytr-hidden-title");
+    if (!node.getAttribute("data-ytr-pending-label")) {
+      node.setAttribute("data-ytr-pending-label", PENDING_LABELS.queued);
+    }
   } else {
     node.classList.remove("ytr-hidden-title");
+    node.removeAttribute("data-ytr-pending-label");
   }
 
   const ytFormatted = node.querySelector?.("yt-formatted-string");
   if (ytFormatted) {
     if (hidden) {
       ytFormatted.classList.add("ytr-hidden-title");
+      if (!ytFormatted.getAttribute("data-ytr-pending-label")) {
+        ytFormatted.setAttribute("data-ytr-pending-label", PENDING_LABELS.queued);
+      }
     } else {
       ytFormatted.classList.remove("ytr-hidden-title");
+      ytFormatted.removeAttribute("data-ytr-pending-label");
     }
+  }
+}
+
+function setPendingLabel(node, text) {
+  if (!node) return;
+  const label = String(text || PENDING_LABELS.queued);
+  node.setAttribute("data-ytr-pending-label", label);
+  const ytFormatted = node.querySelector?.("yt-formatted-string");
+  if (ytFormatted) {
+    ytFormatted.setAttribute("data-ytr-pending-label", label);
   }
 }
 
@@ -447,7 +489,7 @@ function orderNodesForClassification(nodes) {
   return near.concat(far);
 }
 
-function applyStatus(node, original, status) {
+function applyStatus(node, original, status, pendingLabel = "") {
   if (status === "blocked") {
     setCardPending(node, false);
     setCardVisible(node, false);
@@ -468,6 +510,7 @@ function applyStatus(node, original, status) {
   // Unknown while waiting on LLM: keep card space but hide title and thumbnail media.
   setCardVisible(node, true);
   setCardPending(node, true);
+  setPendingLabel(node, pendingLabel || PENDING_LABELS.queued);
   setTitleHidden(node, true);
   setTitleChecked(node, false);
 }
@@ -494,9 +537,14 @@ function markTitlePendingIfNeeded(node, signature) {
     node.setAttribute("data-ytr-original-title", original);
   }
 
+  if (node.getAttribute("data-ytr-requesting") === "1") {
+    applyStatus(node, original, "unknown", PENDING_LABELS.model);
+    return { shouldClassify: false, original };
+  }
+
   const already = processed.get(node);
   if (already && already.original === original && already.signature === signature) {
-    applyStatus(node, original, already.status);
+    applyStatus(node, original, already.status, already.pendingLabel || "");
 
     if (already.status === "unknown") {
       const retryAt = Number(already.nextRetryAt || 0);
@@ -508,7 +556,7 @@ function markTitlePendingIfNeeded(node, signature) {
     return { shouldClassify: false, original };
   }
 
-  applyStatus(node, original, "unknown");
+  applyStatus(node, original, "unknown", PENDING_LABELS.queued);
   return { shouldClassify: true, original };
 }
 
@@ -536,8 +584,20 @@ function scheduleImmediateMask() {
   }, 0);
 }
 
+function pendingLabelFromSource(source) {
+  if (source === "rate-limit-cooldown") return PENDING_LABELS.rateLimit;
+  if (source === "quota-cooldown") return PENDING_LABELS.quota;
+  if (source === "no-key") return PENDING_LABELS.noKey;
+  if (source === "error" || source === "transport-error") return PENDING_LABELS.error;
+  return PENDING_LABELS.retry;
+}
+
 async function classifyBatchTitles(titles, settings) {
-  if (!titles.length) return [];
+  if (!titles.length) {
+    return { statuses: [], source: "empty", roundTripMs: 0 };
+  }
+
+  const startedAt = Date.now();
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -550,12 +610,24 @@ async function classifyBatchTitles(titles, settings) {
     });
 
     if (!response?.ok || !Array.isArray(response?.statuses)) {
-      return titles.map(() => "unknown");
+      return {
+        statuses: titles.map(() => "unknown"),
+        source: "transport-error",
+        roundTripMs: Date.now() - startedAt
+      };
     }
 
-    return response.statuses.map((s) => (s === "safe" || s === "blocked" ? s : "unknown"));
+    return {
+      statuses: response.statuses.map((s) => (s === "safe" || s === "blocked" ? s : "unknown")),
+      source: response.source || "llm",
+      roundTripMs: Date.now() - startedAt
+    };
   } catch (_err) {
-    return titles.map(() => "unknown");
+    return {
+      statuses: titles.map(() => "unknown"),
+      source: "transport-error",
+      roundTripMs: Date.now() - startedAt
+    };
   }
 }
 
@@ -568,10 +640,13 @@ async function processVisibleTitlesOnce() {
   if (!isTargetPage()) return;
 
   ensurePendingStyles();
+  refreshPageBatchState();
 
   const settings = latestSettings;
   const signature = settingsSignature(settings);
   const nodes = orderNodesForClassification(getTitleNodes());
+  const isHomeFirstPass = window.location.pathname === "/" && !pageFirstBatchDone;
+  const uniqueLimit = isHomeFirstPass ? HOME_FIRST_PASS_UNIQUE_TITLES : MAX_UNIQUE_TITLES_PER_PASS;
 
   const candidates = [];
   const titlesInBatch = new Set();
@@ -581,7 +656,8 @@ async function processVisibleTitlesOnce() {
     if (!result.shouldClassify || !result.original) continue;
 
     const hasTitle = titlesInBatch.has(result.original);
-    if (!hasTitle && titlesInBatch.size >= MAX_UNIQUE_TITLES_PER_PASS) {
+    if (!hasTitle && titlesInBatch.size >= uniqueLimit) {
+      setPendingLabel(node, PENDING_LABELS.queued);
       continue;
     }
 
@@ -592,7 +668,14 @@ async function processVisibleTitlesOnce() {
   if (!candidates.length) return;
 
   const uniqueTitles = Array.from(titlesInBatch);
-  const statuses = await classifyBatchTitles(uniqueTitles, settings);
+  for (const item of candidates) {
+    item.node.setAttribute("data-ytr-requesting", "1");
+    setPendingLabel(item.node, PENDING_LABELS.model);
+  }
+
+  const classification = await classifyBatchTitles(uniqueTitles, settings);
+  const statuses = classification.statuses;
+  const unknownLabel = pendingLabelFromSource(classification.source);
 
   const statusByTitle = new Map();
   for (let i = 0; i < uniqueTitles.length; i += 1) {
@@ -601,14 +684,20 @@ async function processVisibleTitlesOnce() {
 
   for (const item of candidates) {
     const status = statusByTitle.get(item.original) || "unknown";
-    applyStatus(item.node, item.original, status);
+    item.node.removeAttribute("data-ytr-requesting");
+    applyStatus(item.node, item.original, status, unknownLabel);
 
     processed.set(item.node, {
       original: item.original,
       signature,
       status,
-      nextRetryAt: status === "unknown" ? Date.now() + UNKNOWN_RETRY_MS : 0
+      nextRetryAt: status === "unknown" ? Date.now() + UNKNOWN_RETRY_MS : 0,
+      pendingLabel: status === "unknown" ? unknownLabel : ""
     });
+  }
+
+  if (isHomeFirstPass && uniqueTitles.length > 0) {
+    pageFirstBatchDone = true;
   }
 }
 
@@ -689,6 +778,22 @@ getSettings().finally(() => {
   processVisibleTitles();
   scheduleRefresh();
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
