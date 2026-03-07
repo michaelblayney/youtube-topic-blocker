@@ -1,12 +1,12 @@
 # YouTube Content Filter (Chrome Extension)
 
-<p align="center">
+<p align="left">
   <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-1f6feb?style=for-the-badge">
   <img alt="Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white">
   <img alt="Model" src="https://img.shields.io/badge/model-gpt--4o--mini-16a34a?style=for-the-badge">
 </p>
 
-<p align="center">
+<p align="left">
   <img src="assets/extension_example.gif" alt="Extension Demo" width="320" />
 </p>
 
