@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Topic Blocker",
+  "name": "YouTube Content Filter",
   "version": "0.1.0",
   "description": "Hide YouTube videos that match blocked topics. Titles stay hidden until LLM safety checks finish.",
   "permissions": ["storage"],
@@ -23,7 +23,7 @@
     }
   ],
   "action": {
-    "default_title": "YouTube Topic Blocker",
+    "default_title": "YouTube Content Filter",
     "default_icon": {
       "128": "assets/icons/128.png"
     },

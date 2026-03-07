@@ -1,10 +1,10 @@
-# YouTube Topic Blocker (Chrome Extension)
+# YouTube Content Filter (Chrome Extension)
 
 Checks YouTube titles with an LLM and hides videos that match blocked topics.
 
 ## Features
-- Block by topic keywords (example: video games, politics, gossip, crypto).
-- Titles and thumbnails are hidden with `Checking...` until LLM classification completes.
+- Block by topic keywords (example: crypto, video-games, sports, gossip).
+- Titles and thumbnails are hidden with `Checking Video...` until LLM classification completes.
 - Safe titles show with a `*` marker so you can confirm they were checked.
 - Blocked videos are fully hidden.
 - Works on:

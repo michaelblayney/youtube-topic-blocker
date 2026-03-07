@@ -125,7 +125,7 @@ function ensurePendingStyles() {
       color: transparent !important;
     }
     .ytr-hidden-title::after {
-      content: "Checking...";
+      content: "Checking Video...";
       position: absolute;
       left: 0;
       top: 0;
