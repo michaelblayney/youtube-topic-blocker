@@ -266,7 +266,7 @@ function findCard(node) {
     if (match) return match;
   }
 
-  return cards[cards.length - 1] || null;
+  return cards[0] || null;
 }
 function getCardAncestors(node) {
   const cards = [];
@@ -309,14 +309,19 @@ function setCardPending(node, pending) {
   const cards = getCardAncestors(node);
   if (!cards.length) return;
 
-  // Always clear stale pending markers first (important for nested lockup wrappers).
+  const primary = findCard(node) || cards[0];
+
+  // Clear stale pending state from wrapper ancestors so one card cannot mask siblings.
   for (const card of cards) {
-    card.classList.remove("ytr-pending-card");
+    if (card !== primary) {
+      card.classList.remove("ytr-pending-card");
+    }
   }
 
   if (pending) {
-    const primary = findCard(node) || cards[0];
     primary.classList.add("ytr-pending-card");
+  } else {
+    primary.classList.remove("ytr-pending-card");
   }
 }
 
@@ -354,6 +359,18 @@ function getTitleNodes() {
   return nodes;
 }
 
+function findLikelyTitleNodeInCard(card) {
+  if (!card || !(card instanceof Element)) return null;
+
+  for (const selector of TITLE_SELECTORS) {
+    const candidate = card.querySelector(selector);
+    if (candidate && isLikelyVideoTitleNode(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 function maskWatchSidebarCardsImmediately() {
   if (!window.location.pathname.startsWith("/watch")) return;
 
@@ -370,7 +387,11 @@ function maskWatchSidebarCardsImmediately() {
   for (const card of cards) {
     if (!(card instanceof Element)) continue;
     if (card.hasAttribute("data-ytr-filter-hidden")) continue;
-    if (!card.querySelector("a[href*='/watch']")) continue;
+    const titleNode = findLikelyTitleNodeInCard(card);
+    if (!titleNode) {
+      card.classList.remove("ytr-pending-card");
+      continue;
+    }
     if (card.querySelector(".ytr-checked-title")) continue;
     card.classList.add("ytr-pending-card");
   }
@@ -638,3 +659,9 @@ getSettings().finally(() => {
   processVisibleTitles();
   scheduleRefresh();
 });
+
+
+
+
+
+
