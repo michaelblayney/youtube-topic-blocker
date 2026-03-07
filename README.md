@@ -6,11 +6,11 @@
   <img alt="Model" src="https://img.shields.io/badge/model-gpt--4o--mini-16a34a?style=for-the-badge">
 </p>
 
+YouTube video card filtering for topic-based content blocking.
+
 <p align="left">
   <img src="assets/extension_example.gif" alt="Extension Demo" width="240" />
 </p>
-
-YouTube video card filtering for topic-based content blocking.
 
 ## Highlights
 
