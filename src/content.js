@@ -51,10 +51,13 @@ const PRIMARY_CARD_SELECTORS = [
 ];
 const PENDING_STYLE_ID = "ytr-pending-style";
 const END_SCREEN_SELECTOR = ".ytp-fullscreen-grid-main-content, .ytp-modern-videowall-still.ytp-suggestion-set";
-const UNKNOWN_RETRY_MS = 1400;
+const UNKNOWN_RETRY_MS = 900;
 const VIEWPORT_TOP_BUFFER_PX = 120;
 const VIEWPORT_BOTTOM_BUFFER_PX = 520;
-const MAX_UNIQUE_TITLES_PER_PASS = 180;
+const MAX_UNIQUE_TITLES_PER_PASS = 72;
+const PROCESS_DEBOUNCE_MS = 40;
+const HEARTBEAT_INTERVAL_MS = 700;
+const END_SCREEN_SWEEP_MIN_INTERVAL_MS = 320;
 
 const processed = new WeakMap();
 
@@ -66,6 +69,7 @@ let stopped = false;
 let processing = false;
 let rerunRequested = false;
 let latestSettings = { ...DEFAULT_SETTINGS };
+let lastEndScreenSweepAt = 0;
 
 function normalize(text) {
   return (text || "").replace(/\s+/g, " ").trim();
@@ -171,6 +175,11 @@ function ensurePendingStyles() {
     .ytr-pending-card a.yt-lockup-view-model__content-image {
       visibility: hidden !important;
     }
+    .ytp-fullscreen-grid-main-content,
+    .ytp-modern-videowall-still.ytp-suggestion-set {
+      display: none !important;
+      visibility: hidden !important;
+    }
     @keyframes ytrPulse {
       from { background-position: 100% 0; }
       to { background-position: -100% 0; }
@@ -201,7 +210,15 @@ function stopProcessing() {
   }
 }
 
-function removeEndScreenRecommendations() {
+function removeEndScreenRecommendations(force = false) {
+  if (!window.location.pathname.startsWith("/watch")) return;
+
+  const now = Date.now();
+  if (!force && now - lastEndScreenSweepAt < END_SCREEN_SWEEP_MIN_INTERVAL_MS) {
+    return;
+  }
+  lastEndScreenSweepAt = now;
+
   const nodes = document.querySelectorAll(END_SCREEN_SELECTOR);
   for (const node of nodes) {
     if (node instanceof Element) {
@@ -552,7 +569,7 @@ async function processVisibleTitlesOnce() {
 
   ensurePendingStyles();
 
-  const settings = await getSettings();
+  const settings = latestSettings;
   const signature = settingsSignature(settings);
   const nodes = orderNodesForClassification(getTitleNodes());
 
@@ -621,7 +638,7 @@ function scheduleRefresh() {
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     processVisibleTitles();
-  }, 70);
+  }, PROCESS_DEBOUNCE_MS);
 }
 
 observer = new MutationObserver(() => {
@@ -646,7 +663,7 @@ heartbeatTimer = setInterval(() => {
     scheduleImmediateMask();
     scheduleRefresh();
   }
-}, 1200);
+}, HEARTBEAT_INTERVAL_MS);
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "sync") return;
@@ -672,6 +689,11 @@ getSettings().finally(() => {
   processVisibleTitles();
   scheduleRefresh();
 });
+
+
+
+
+
 
 
 
