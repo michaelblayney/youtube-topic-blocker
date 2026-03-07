@@ -23,14 +23,8 @@ function estimateCostFromTokens(promptTokens, completionTokens) {
   return (inCost + outCost) * ESTIMATE_ADJUSTMENT_FACTOR;
 }
 
-async function loadModelLabel() {
-  try {
-    const settings = await chrome.storage.sync.get(["model"]);
-    const model = String(settings.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
-    byId("spendLabel").textContent = `Estimated Spend | ${model}`;
-  } catch (_err) {
-    byId("spendLabel").textContent = `Estimated Spend | ${DEFAULT_MODEL}`;
-  }
+function loadModelLabel() {
+  byId("spendLabel").textContent = `Estimated Spend | ${DEFAULT_MODEL}`;
 }
 
 async function loadRuntimeStatus() {
@@ -79,7 +73,8 @@ async function loadUsage() {
 }
 
 async function refresh() {
-  await Promise.all([loadModelLabel(), loadRuntimeStatus(), loadUsage()]);
+  await Promise.all([loadRuntimeStatus(), loadUsage()]);
+  loadModelLabel();
 }
 
 function openOptionsPage() {

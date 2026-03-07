@@ -113,7 +113,7 @@ async function loadUsageStats() {
 function load() {
   chrome.storage.sync.get(DEFAULT_SETTINGS, (settings) => {
     byId("openAiApiKey").value = settings.openAiApiKey || "";
-    byId("model").value = settings.model || DEFAULT_SETTINGS.model;
+    byId("model").value = DEFAULT_SETTINGS.model;
 
     const topics = Array.isArray(settings.blockedTopics)
       ? settings.blockedTopics
@@ -131,7 +131,7 @@ function save() {
   const next = {
     mode: "block_only",
     openAiApiKey: byId("openAiApiKey").value.trim(),
-    model: byId("model").value.trim() || DEFAULT_SETTINGS.model,
+    model: DEFAULT_SETTINGS.model,
     blockedTopics: parseTopics(byId("blockedTopics").value)
   };
 

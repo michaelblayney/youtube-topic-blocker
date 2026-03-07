@@ -4,15 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Content Filter Options</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./options.css" />
   </head>
   <body>
     <main class="wrap">
-      <h1>YouTube Content Filter</h1>
-      <p>Titles stay hidden until checked by the LLM. Applies to Home page and recommended videos.</p>
-      <p id="runtimeStatus" class="runtime"></p>
+      <section class="hero panel">
+        <p class="eyebrow">YouTube Extension</p>
+        <h1>YouTube Content Filter</h1>
+        <p class="lead">Titles stay hidden until checked by the LLM. Applies to Home page and recommended videos.</p>
+      </section>
 
-      <section class="statsCard">
+      <section class="statsCard panel">
         <h2>Usage</h2>
         <p id="usageSummary" class="usageSummary"></p>
         <div class="actions">
@@ -21,26 +29,30 @@
         </div>
       </section>
 
-      <label>
-        Blocked topics (comma separated)
-        <textarea id="blockedTopics" rows="3" placeholder="crypto, video-games, sports, gossip"></textarea>
-      </label>
+      <section class="settings panel">
+        <h2>Settings</h2>
 
+        <label class="field">
+          <span>Blocked topics (comma separated)</span>
+          <textarea id="blockedTopics" rows="3" placeholder="crypto, video-games, sports, gossip"></textarea>
+        </label>
 
-      <label>
-        OpenAI API key
-        <input id="openAiApiKey" type="password" placeholder="sk-..." />
-      </label>
+        <label class="field">
+          <span>OpenAI API key</span>
+          <input id="openAiApiKey" type="password" placeholder="sk-..." />
+        </label>
 
-      <label>
-        Model
-        <input id="model" type="text" value="gpt-4o-mini" />
-      </label>
+        <label class="field">
+          <span>Model</span>
+          <input id="model" type="text" value="gpt-4o-mini" disabled />
+          <small>Model selection is temporarily fixed.</small>
+        </label>
 
-      <div class="actions">
-        <button id="saveBtn">Save</button>
-        <span id="status"></span>
-      </div>
+        <div class="actions">
+          <button id="saveBtn">Save</button>
+          <span id="status"></span>
+        </div>
+      </section>
     </main>
 
     <script src="./options.js"></script>
