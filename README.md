@@ -7,7 +7,7 @@
 </p>
 
 <p align="left">
-  <img src="assets/extension_example.gif" alt="Extension Demo" width="320" />
+  <img src="assets/extension_example.gif" alt="Extension Demo" width="240" />
 </p>
 
 YouTube video card filtering for topic-based content blocking.
