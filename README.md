@@ -7,17 +7,17 @@
 </p>
 
 YouTube video card filtering for topic-based content blocking.
-
 Video metadata stays hidden until classification completes.
 
 
 ## Highlights
 
-- :brain: Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
-- :lock: Privacy-first presentation: titles and media remain hidden while checks are pending.
-- :white_check_mark: Visual verification for approved videos (checked marker on safe titles).
-- :dart: Coverage for YouTube Home and Watch-page recommendation surfaces.
-- :bar_chart: Usage telemetry in Options (titles processed, LLM calls, token estimates, estimated spend).
+- Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
+- Privacy-first presentation: titles and media remain hidden while checks are pending.
+- Visual verification for approved videos (checked marker on safe titles).
+- Coverage for YouTube Home and Watch-page recommendation surfaces.
+- Usage telemetry in Options (titles processed, LLM calls, token estimates, estimated spend).
+
 
 ## Installation & Configuration
 
@@ -33,8 +33,9 @@ Video metadata stays hidden until classification completes.
 > [!NOTE]
 > Model selection is currently fixed to `gpt-4o-mini` in the UI.
 
+
 ## Security and Data Handling
 
-- :lock: API key is stored in Chrome extension storage on your local profile.
-- :outbox_tray: Title text is sent to OpenAI for classification.
-- :building_construction: No external backend is required for core operation.
+- API key is stored in Chrome extension storage on your local profile.
+- Title text is sent to OpenAI for classification.
+- No external backend is required for core operation.
