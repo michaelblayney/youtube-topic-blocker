@@ -50,6 +50,7 @@ const PRIMARY_CARD_SELECTORS = [
   "ytd-reel-item-renderer"
 ];
 const PENDING_STYLE_ID = "ytr-pending-style";
+const END_SCREEN_SELECTOR = ".ytp-fullscreen-grid-main-content, .ytp-modern-videowall-still.ytp-suggestion-set";
 const UNKNOWN_RETRY_MS = 1400;
 const VIEWPORT_TOP_BUFFER_PX = 120;
 const VIEWPORT_BOTTOM_BUFFER_PX = 520;
@@ -197,6 +198,15 @@ function stopProcessing() {
   if (observer) {
     observer.disconnect();
     observer = null;
+  }
+}
+
+function removeEndScreenRecommendations() {
+  const nodes = document.querySelectorAll(END_SCREEN_SELECTOR);
+  for (const node of nodes) {
+    if (node instanceof Element) {
+      node.remove();
+    }
   }
 }
 
@@ -488,6 +498,7 @@ function markTitlePendingIfNeeded(node, signature) {
 function maskVisibleTitlesImmediately() {
   if (stopped || !isExtensionContextValid() || !isTargetPage()) return;
   ensurePendingStyles();
+  removeEndScreenRecommendations();
   maskWatchSidebarCardsImmediately();
 
   const signature = settingsSignature(latestSettings);
@@ -615,6 +626,7 @@ function scheduleRefresh() {
 
 observer = new MutationObserver(() => {
   try {
+    removeEndScreenRecommendations();
     scheduleImmediateMask();
     scheduleRefresh();
   } catch (_err) {
@@ -630,6 +642,7 @@ document.addEventListener("yt-page-data-updated", scheduleRefresh);
 
 heartbeatTimer = setInterval(() => {
   if (!stopped && isTargetPage()) {
+    removeEndScreenRecommendations();
     scheduleImmediateMask();
     scheduleRefresh();
   }
@@ -659,6 +672,7 @@ getSettings().finally(() => {
   processVisibleTitles();
   scheduleRefresh();
 });
+
 
 
 
