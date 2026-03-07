@@ -8,6 +8,10 @@
 
 YouTube video card filtering for topic-based content blocking.
 
+## Demo
+
+![Extension Demo](assets/extension_example.gif)
+
 ## Highlights
 
 - Topic-based blocking with comma-separated rules (for example: `crypto, gambling, gossip`).
