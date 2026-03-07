@@ -1,6 +1,6 @@
 # YouTube Content Filter (Chrome Extension)
 
-<p align="left">
+<p align="left" style="margin:0;">
   <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-1f6feb?style=for-the-badge">
   <img alt="Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white">
   <img alt="Model" src="https://img.shields.io/badge/model-gpt--4o--mini-16a34a?style=for-the-badge">
@@ -8,7 +8,7 @@
 
 YouTube video card filtering for topic-based content blocking.
 
-<p align="left">
+<p align="left" style="margin:0;">
   &emsp;<img src="assets/extension_example.gif" alt="Extension Demo" width="280" />
   &emsp;<sub>Checks video before displaying. Shows video only if it's not related to any blacklisted topics.</sub>
 </p>
@@ -41,6 +41,7 @@ YouTube video card filtering for topic-based content blocking.
 - API key is stored in Chrome extension storage on your local profile.
 - Title text is sent to OpenAI for classification.
 - No external backend is required for core operation.
+
 
 
 
