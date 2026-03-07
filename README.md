@@ -8,12 +8,9 @@
 
 YouTube video card filtering for topic-based content blocking.
 
-<p align="left">
-  &emsp;<img src="assets/extension_example.gif" alt="Extension Demo" width="280" />
-</p>
-
-<p>
-&emsp;<sub>Checks video before displaying. Shows video only if it's not related to any blacklisted topics.</sub>
+<p align="left" style="margin:0;">
+  &emsp;<img src="assets/extension_example.gif" alt="Extension Demo" width="280" /><br />
+  &emsp;<sub>Checks video before displaying. Shows video only if it's not related to any blacklisted topics.</sub>
 </p>
 
 ## Highlights
@@ -43,6 +40,8 @@ YouTube video card filtering for topic-based content blocking.
 - API key is stored in Chrome extension storage on your local profile.
 - Title text is sent to OpenAI for classification.
 - No external backend is required for core operation.
+
+
 
 
 
