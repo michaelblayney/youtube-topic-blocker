@@ -16,6 +16,13 @@ function byId(id) {
   return document.getElementById(id);
 }
 
+function setText(id, text) {
+  const el = byId(id);
+  if (!el) return false;
+  el.textContent = text || "";
+  return true;
+}
+
 function parseTopics(raw) {
   return String(raw || "")
     .split(",")
@@ -32,22 +39,20 @@ function formatUsd(n) {
 }
 
 function setStatus(text, timeoutMs = 1800) {
-  const el = byId("status");
-  el.textContent = text;
+  if (!setText("status", text)) return;
   if (timeoutMs > 0) {
     setTimeout(() => {
-      el.textContent = "";
+      setText("status", "");
     }, timeoutMs);
   }
 }
 
 function setRuntimeStatus(text) {
-  const el = byId("runtimeStatus");
-  el.textContent = text || "";
+  setText("runtimeStatus", text);
 }
 
 function setUsageSummary(text) {
-  byId("usageSummary").textContent = text || "";
+  setText("usageSummary", text);
 }
 
 function estimateCostFromTokens(promptTokens, completionTokens) {
@@ -112,15 +117,21 @@ async function loadUsageStats() {
 
 function load() {
   chrome.storage.sync.get(DEFAULT_SETTINGS, (settings) => {
-    byId("openAiApiKey").value = settings.openAiApiKey || "";
-    byId("model").value = DEFAULT_SETTINGS.model;
+    const keyInput = byId("openAiApiKey");
+    const modelInput = byId("model");
+    const topicsInput = byId("blockedTopics");
+    const saveBtn = byId("saveBtn");
+    if (!keyInput || !modelInput || !topicsInput || !saveBtn) return;
+
+    keyInput.value = settings.openAiApiKey || "";
+    modelInput.value = DEFAULT_SETTINGS.model;
 
     const topics = Array.isArray(settings.blockedTopics)
       ? settings.blockedTopics
       : parseTopics(settings.blockedTopics);
 
-    byId("blockedTopics").value = topics.join(", ");
-    byId("saveBtn").textContent = settings.openAiApiKey ? "Save" : "Save (No API key: titles stay hidden)";
+    topicsInput.value = topics.join(", ");
+    saveBtn.textContent = settings.openAiApiKey ? "Save" : "Save (No API key: titles stay hidden)";
 
     loadRuntimeStatus();
     loadUsageStats();
@@ -128,11 +139,15 @@ function load() {
 }
 
 function save() {
+  const keyInput = byId("openAiApiKey");
+  const topicsInput = byId("blockedTopics");
+  if (!keyInput || !topicsInput) return;
+
   const next = {
     mode: "block_only",
-    openAiApiKey: byId("openAiApiKey").value.trim(),
+    openAiApiKey: keyInput.value.trim(),
     model: DEFAULT_SETTINGS.model,
-    blockedTopics: parseTopics(byId("blockedTopics").value)
+    blockedTopics: parseTopics(topicsInput.value)
   };
 
   chrome.storage.sync.set(next, async () => {
@@ -155,7 +170,20 @@ async function resetUsage() {
   }
 }
 
-byId("saveBtn").addEventListener("click", save);
-byId("refreshStatsBtn").addEventListener("click", loadUsageStats);
-byId("resetStatsBtn").addEventListener("click", resetUsage);
-load();
+function init() {
+  const saveBtn = byId("saveBtn");
+  const refreshBtn = byId("refreshStatsBtn");
+  const resetBtn = byId("resetStatsBtn");
+  if (!saveBtn || !refreshBtn || !resetBtn) return;
+
+  saveBtn.addEventListener("click", save);
+  refreshBtn.addEventListener("click", loadUsageStats);
+  resetBtn.addEventListener("click", resetUsage);
+  load();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}

@@ -9,6 +9,13 @@ function byId(id) {
   return document.getElementById(id);
 }
 
+function setText(id, text) {
+  const el = byId(id);
+  if (!el) return false;
+  el.textContent = text || "";
+  return true;
+}
+
 function formatInt(n) {
   return Number(n || 0).toLocaleString();
 }
@@ -24,32 +31,32 @@ function estimateCostFromTokens(promptTokens, completionTokens) {
 }
 
 function loadModelLabel() {
-  byId("spendLabel").textContent = `Estimated Spend | ${DEFAULT_MODEL}`;
+  setText("spendLabel", `Estimated Spend | ${DEFAULT_MODEL}`);
 }
 
 async function loadRuntimeStatus() {
   try {
     const response = await chrome.runtime.sendMessage({ type: "GET_RUNTIME_STATUS" });
     if (!response?.ok) {
-      byId("runtimeStatus").textContent = "";
+      setText("runtimeStatus", "");
       return;
     }
 
     if (response.disabledUntil && response.now < response.disabledUntil) {
       const minutes = Math.max(1, Math.round((response.disabledUntil - response.now) / 60000));
-      byId("runtimeStatus").textContent = `Quota cooldown (${minutes} min)`;
+      setText("runtimeStatus", `Quota cooldown (${minutes} min)`);
       return;
     }
 
     if (response.rateLimitUntil && response.now < response.rateLimitUntil) {
       const seconds = Math.max(1, Math.round((response.rateLimitUntil - response.now) / 1000));
-      byId("runtimeStatus").textContent = `Rate limit cooldown (${seconds}s)`;
+      setText("runtimeStatus", `Rate limit cooldown (${seconds}s)`);
       return;
     }
 
-    byId("runtimeStatus").textContent = "";
+    setText("runtimeStatus", "");
   } catch (_err) {
-    byId("runtimeStatus").textContent = "";
+    setText("runtimeStatus", "");
   }
 }
 
@@ -64,11 +71,11 @@ async function loadUsage() {
     const completionTokens = Number(stats.completionTokens || 0);
 
     const estCost = estimateCostFromTokens(promptTokens, completionTokens);
-    byId("estSpend").textContent = formatUsd(estCost);
-    byId("usageLine").textContent = `${formatInt(totalTitles)} titles checked | ${formatInt(llmCalls)} LLM calls`;
+    setText("estSpend", formatUsd(estCost));
+    setText("usageLine", `${formatInt(totalTitles)} titles checked | ${formatInt(llmCalls)} LLM calls`);
   } catch (_err) {
-    byId("estSpend").textContent = "$0.0000";
-    byId("usageLine").textContent = "Usage unavailable";
+    setText("estSpend", "$0.0000");
+    setText("usageLine", "Usage unavailable");
   }
 }
 
@@ -81,6 +88,18 @@ function openOptionsPage() {
   chrome.runtime.openOptionsPage();
 }
 
-byId("refreshBtn").addEventListener("click", refresh);
-byId("openOptionsBtn").addEventListener("click", openOptionsPage);
-refresh();
+function init() {
+  const refreshBtn = byId("refreshBtn");
+  const openOptionsBtn = byId("openOptionsBtn");
+  if (!refreshBtn || !openOptionsBtn) return;
+
+  refreshBtn.addEventListener("click", refresh);
+  openOptionsBtn.addEventListener("click", openOptionsPage);
+  refresh();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}
