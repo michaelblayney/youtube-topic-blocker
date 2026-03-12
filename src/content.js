@@ -400,7 +400,7 @@ function isLikelyVideoTitleNode(node) {
   const text = normalize(node.textContent);
   if (!text) return false;
 
-  if (node.closest("ytd-guide-renderer, ytd-mini-guide-renderer, ytd-masthead")) return false;
+  if (node.closest("ytd-guide-renderer, ytd-mini-guide-renderer, ytd-masthead, ytd-comment-renderer, ytd-comments, #comments, ytd-playlist-panel-renderer")) return false;
 
   const videoContainer = node.closest(CARD_SELECTOR);
   if (videoContainer) return true;
