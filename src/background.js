@@ -5,7 +5,8 @@ const STORAGE_KEYS = {
   quotaDisableReason: "ytrOpenAiDisableReason",
   rateLimitUntil: "ytrRateLimitUntil",
   rateLimitReason: "ytrRateLimitReason",
-  apiStats: "ytrApiStats"
+  apiStats: "ytrApiStats",
+  classCache: "ytrClassCache"
 };
 
 const LOCK_KEYS = [
@@ -17,16 +18,105 @@ const LOCK_KEYS = [
 
 const QUOTA_DISABLE_MS = 12 * 60 * 60 * 1000;
 const DEFAULT_RATE_LIMIT_MS = 25_000;
-const MIN_API_GAP_MS = 300;
+const MIN_API_GAP_MS = 100;
 const USAGE_FLUSH_DELAY_MS = 700;
+const CACHE_FLUSH_DELAY_MS = 2000;
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 5000;
+
+// --- In-memory state ---
 
 const classificationCache = new Map();
+const cacheTimestamps = new Map();
+let cacheFlushTimer = null;
+let persistentCacheLoaded = loadPersistentCache();
+
 let apiChain = Promise.resolve();
 let nextAllowedRequestAt = 0;
 let usageFlushTimer = null;
 let pendingUsageDelta = null;
 let latestSettings = { ...DEFAULT_SETTINGS };
 let settingsReady = false;
+let topicMatchers = [];
+
+// --- Persistent classification cache ---
+
+async function loadPersistentCache() {
+  try {
+    const items = await chrome.storage.local.get([STORAGE_KEYS.classCache]);
+    const stored = items?.[STORAGE_KEYS.classCache] || {};
+    const now = Date.now();
+    for (const [key, entry] of Object.entries(stored)) {
+      if (now - entry.t < CACHE_TTL_MS) {
+        classificationCache.set(key, entry.s);
+        cacheTimestamps.set(key, entry.t);
+      }
+    }
+  } catch {
+    // Non-critical; start with empty cache.
+  }
+}
+
+function setCacheEntry(key, status) {
+  classificationCache.set(key, status);
+  cacheTimestamps.set(key, Date.now());
+  scheduleCacheFlush();
+}
+
+function scheduleCacheFlush() {
+  if (cacheFlushTimer) return;
+  cacheFlushTimer = setTimeout(flushCache, CACHE_FLUSH_DELAY_MS);
+}
+
+async function flushCache() {
+  cacheFlushTimer = null;
+  const entries = Array.from(classificationCache.entries());
+
+  // Evict expired entries
+  const now = Date.now();
+  const live = entries.filter(([key]) => {
+    const ts = cacheTimestamps.get(key) || 0;
+    return now - ts < CACHE_TTL_MS;
+  });
+
+  // Cap at max entries (keep most recent)
+  const sorted = live.sort((a, b) =>
+    (cacheTimestamps.get(b[0]) || 0) - (cacheTimestamps.get(a[0]) || 0)
+  );
+  const kept = sorted.slice(0, CACHE_MAX_ENTRIES);
+
+  const obj = {};
+  for (const [key, status] of kept) {
+    obj[key] = { s: status, t: cacheTimestamps.get(key) || now };
+  }
+
+  try {
+    await chrome.storage.local.set({ [STORAGE_KEYS.classCache]: obj });
+  } catch {
+    // Storage full or unavailable; non-critical.
+  }
+}
+
+// --- Keyword pre-filter ---
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildTopicMatchers(blockedTopics) {
+  return blockedTopics
+    .filter((t) => t.length >= 2)
+    .map((topic) => new RegExp(`\\b${escapeRegex(topic)}\\b`, "i"));
+}
+
+function matchesBlockedTopic(title, matchers) {
+  for (const re of matchers) {
+    if (re.test(title)) return true;
+  }
+  return false;
+}
+
+// --- Usage stats ---
 
 function defaultApiStats() {
   return {
@@ -35,6 +125,7 @@ function defaultApiStats() {
     llmCalls: 0,
     llmTitles: 0,
     cacheHits: 0,
+    preFilterHits: 0,
     blockedMatches: 0,
     unknownTitles: 0,
     promptTokens: 0,
@@ -63,8 +154,6 @@ function extractRetrySeconds(message) {
   const match = String(message || "").match(/try again in\s*(\d+)\s*s/i);
   return match ? Number(match[1]) : null;
 }
-
-// --- Usage stats ---
 
 function mergeApiStats(base, delta) {
   const stats = { ...defaultApiStats(), ...(base || {}) };
@@ -178,6 +267,7 @@ async function getSettings() {
     ...items,
     blockedTopics: parseTopics(items.blockedTopics)
   };
+  topicMatchers = buildTopicMatchers(latestSettings.blockedTopics);
   settingsReady = true;
   return latestSettings;
 }
@@ -248,7 +338,7 @@ async function callOpenAI({ apiKey, model, prompt }) {
 }
 
 function cacheKey(title, blockedTopics, model) {
-  return JSON.stringify({ title, blockedTopics, model });
+  return JSON.stringify([model, blockedTopics, title]);
 }
 
 async function runThrottled(task) {
@@ -288,6 +378,8 @@ function buildResult(statuses, source, extra = {}) {
 }
 
 async function handleBatchClassify(payload) {
+  await persistentCacheLoaded;
+
   const titles = toStringArray(payload?.titles);
   if (!titles.length) return { ok: true, statuses: [] };
 
@@ -296,6 +388,7 @@ async function handleBatchClassify(payload) {
   const settings = settingsReady ? latestSettings : await getSettings();
   const model = payload.model || settings.model;
   const topics = parseTopics(payload.blockedTopics?.length ? payload.blockedTopics : settings.blockedTopics);
+  const matchers = topicMatchers.length ? topicMatchers : buildTopicMatchers(topics);
 
   const statuses = new Array(titles.length).fill("unknown");
   const pending = [];
@@ -303,12 +396,22 @@ async function handleBatchClassify(payload) {
   for (let i = 0; i < titles.length; i++) {
     const key = cacheKey(titles[i], topics, model);
     const cached = classificationCache.get(key);
+
     if (cached === "safe" || cached === "blocked") {
       statuses[i] = cached;
       queueUsageDelta({ cacheHits: 1 });
-    } else {
-      pending.push({ i, title: titles[i], key });
+      continue;
     }
+
+    // Keyword pre-filter: instant block for obvious matches
+    if (matchesBlockedTopic(titles[i], matchers)) {
+      statuses[i] = "blocked";
+      setCacheEntry(key, "blocked");
+      queueUsageDelta({ preFilterHits: 1 });
+      continue;
+    }
+
+    pending.push({ i, title: titles[i], key });
   }
 
   if (!pending.length) return buildResult(statuses, "cache");
@@ -348,7 +451,7 @@ async function handleBatchClassify(payload) {
       const status = mapped.get(j);
       if (status) {
         statuses[p.i] = status;
-        classificationCache.set(p.key, status);
+        setCacheEntry(p.key, status);
         llmTitleCount++;
       }
     }
@@ -418,7 +521,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "sync") return;
-  if (changes.blockedTopics) latestSettings.blockedTopics = parseTopics(changes.blockedTopics.newValue);
+  if (changes.blockedTopics) {
+    latestSettings.blockedTopics = parseTopics(changes.blockedTopics.newValue);
+    topicMatchers = buildTopicMatchers(latestSettings.blockedTopics);
+  }
   if (changes.model) latestSettings.model = String(changes.model.newValue || DEFAULT_SETTINGS.model);
   if (changes.openAiApiKey) latestSettings.openAiApiKey = String(changes.openAiApiKey.newValue || "");
   settingsReady = true;
