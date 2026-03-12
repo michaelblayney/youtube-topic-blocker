@@ -6,20 +6,25 @@
 //   OPENAI_API_KEY=sk-... node test/classify-accuracy.mjs "topic1, topic2, ..."
 //
 // Options:
-//   MODEL env var overrides the model (default: gpt-4o-mini)
+//   --unsafe        Show full blocked titles instead of redacting them
+//   MODEL env var   Override the model (default: gpt-4o-mini)
 //
-// Blocked test titles are generated from templates and NEVER shown in output.
+// By default blocked test titles are redacted in output.
 
 const API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.MODEL || "gpt-4o-mini";
-const topicsArg = process.argv[2];
+
+const args = process.argv.slice(2);
+const SHOW_BLOCKED = args.includes("--unsafe");
+const positional = args.filter((a) => !a.startsWith("--"));
+const topicsArg = positional[0];
 
 if (!API_KEY) {
   console.error("Error: Set OPENAI_API_KEY environment variable.");
   process.exit(1);
 }
 if (!topicsArg) {
-  console.error("Usage: OPENAI_API_KEY=sk-... node test/classify-accuracy.mjs \"topic1, topic2, ...\"");
+  console.error("Usage: OPENAI_API_KEY=sk-... node test/classify-accuracy.mjs \"topic1, topic2, ...\" [--unsafe]");
   process.exit(1);
 }
 
@@ -143,7 +148,8 @@ async function main() {
   console.log(`\n  Classification Accuracy Test`);
   console.log(`  Model: ${MODEL}`);
   console.log(`  Blocked topics: ${blockedTopics.length} configured`);
-  console.log(`  Testing ${SAFE_TITLES.length} safe + ${blockedTestTitles.length} blocked titles...\n`);
+  console.log(`  Testing ${SAFE_TITLES.length} safe + ${blockedTestTitles.length} blocked titles...`);
+  console.log(`  Blocked titles: ${SHOW_BLOCKED ? "shown (--unsafe)" : "redacted (pass --unsafe to show)"}\n`);
 
   const result = await classify(allTitles);
 
@@ -167,7 +173,7 @@ async function main() {
     console.log(`    ${mark} "${SAFE_TITLES[i]}" → ${status}`);
   }
 
-  console.log("\n  ── Blocked titles (redacted) ──");
+  console.log(`\n  ── Blocked titles${SHOW_BLOCKED ? "" : " (redacted)"} ──`);
   for (let i = 0; i < blockedTestTitles.length; i++) {
     const idx = SAFE_TITLES.length + i;
     const status = statusMap.get(idx) || "unknown";
@@ -176,7 +182,10 @@ async function main() {
     else blockedMissed++;
     const topicIdx = blockedTopics.indexOf(blockedTestTitles[i].topic) + 1;
     const mark = correct ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m";
-    console.log(`    ${mark} [Topic ${topicIdx}] test #${i + 1} → ${status}`);
+    const label = SHOW_BLOCKED
+      ? `"${blockedTestTitles[i].title}"`
+      : `[Topic ${topicIdx}] test #${i + 1}`;
+    console.log(`    ${mark} ${label} → ${status}`);
   }
 
   const total = SAFE_TITLES.length + blockedTestTitles.length;
