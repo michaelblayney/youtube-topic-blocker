@@ -1,5 +1,4 @@
 const DEFAULT_SETTINGS = {
-  mode: "block_only",
   blockedTopics: [],
   model: "gpt-4o-mini",
   openAiApiKey: ""
@@ -36,6 +35,8 @@ const CARD_SELECTORS = [
 ];
 
 const CARD_SELECTOR = CARD_SELECTORS.join(", ");
+
+// Subset of CARD_SELECTORS — preferred card types to operate on (excludes lockup wrappers).
 const PRIMARY_CARD_SELECTORS = [
   "ytd-rich-item-renderer",
   "ytd-video-renderer",
@@ -49,6 +50,21 @@ const PRIMARY_CARD_SELECTORS = [
   "ytd-compact-autoplay-renderer",
   "ytd-reel-item-renderer"
 ];
+const PRIMARY_CARD_SELECTOR = PRIMARY_CARD_SELECTORS.join(", ");
+
+const EXCLUDED_ANCESTORS = [
+  "ytd-guide-renderer",
+  "ytd-mini-guide-renderer",
+  "ytd-masthead",
+  "ytd-comment-renderer",
+  "ytd-comments",
+  "#comments",
+  "ytd-playlist-panel-renderer"
+].join(", ");
+
+const WATCH_SIDEBAR_CARD_SELECTOR = ["ytd-watch-next-secondary-results-renderer", "#related"]
+  .flatMap((parent) => CARD_SELECTORS.map((card) => `${parent} ${card}`))
+  .join(", ");
 const PENDING_STYLE_ID = "ytr-pending-style";
 const END_SCREEN_SELECTOR = ".ytp-fullscreen-grid-main-content, .ytp-modern-videowall-still.ytp-suggestion-set";
 const UNKNOWN_RETRY_MS = 900;
@@ -115,7 +131,6 @@ function refreshPageBatchState() {
 
 function settingsSignature(settings) {
   return JSON.stringify({
-    mode: settings.mode,
     blockedTopics: settings.blockedTopics,
     model: settings.model
   });
@@ -132,14 +147,12 @@ async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
       const blockedTopics = Array.isArray(items.blockedTopics) ? items.blockedTopics : parseTopics(items.blockedTopics);
-      const settings = {
+      latestSettings = {
         ...DEFAULT_SETTINGS,
         ...items,
-        mode: "block_only",
         blockedTopics
       };
-      latestSettings = settings;
-      resolve(settings);
+      resolve(latestSettings);
     });
   });
 }
@@ -329,13 +342,7 @@ function restoreOriginalTitle(node, original) {
 function findCard(node) {
   const cards = getCardAncestors(node);
   if (!cards.length) return null;
-
-  for (const selector of PRIMARY_CARD_SELECTORS) {
-    const match = cards.find((card) => card.matches?.(selector));
-    if (match) return match;
-  }
-
-  return cards[0] || null;
+  return cards.find((card) => card.matches(PRIMARY_CARD_SELECTOR)) || cards[0];
 }
 function getCardAncestors(node) {
   const cards = [];
@@ -400,7 +407,7 @@ function isLikelyVideoTitleNode(node) {
   const text = normalize(node.textContent);
   if (!text) return false;
 
-  if (node.closest("ytd-guide-renderer, ytd-mini-guide-renderer, ytd-masthead, ytd-comment-renderer, ytd-comments, #comments, ytd-playlist-panel-renderer")) return false;
+  if (node.closest(EXCLUDED_ANCESTORS)) return false;
 
   const videoContainer = node.closest(CARD_SELECTOR);
   if (videoContainer) return true;
@@ -443,16 +450,7 @@ function findLikelyTitleNodeInCard(card) {
 function maskWatchSidebarCardsImmediately() {
   if (!window.location.pathname.startsWith("/watch")) return;
 
-  const scopedSelectors = [];
-  for (const parent of ["ytd-watch-next-secondary-results-renderer", "#related"]) {
-    for (const cardSelector of CARD_SELECTORS) {
-      scopedSelectors.push(`${parent} ${cardSelector}`);
-    }
-  }
-
-  if (!scopedSelectors.length) return;
-
-  const cards = document.querySelectorAll(scopedSelectors.join(", "));
+  const cards = document.querySelectorAll(WATCH_SIDEBAR_CARD_SELECTOR);
   for (const card of cards) {
     if (!(card instanceof Element)) continue;
     if (card.hasAttribute("data-ytr-filter-hidden")) continue;
@@ -768,7 +766,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.openAiApiKey) {
     latestSettings.openAiApiKey = String(changes.openAiApiKey.newValue || "");
   }
-  if (changes.blockedTopics || changes.model || changes.openAiApiKey || changes.mode) {
+  if (changes.blockedTopics || changes.model || changes.openAiApiKey) {
     scheduleRefresh();
   }
 });
@@ -778,31 +776,3 @@ getSettings().finally(() => {
   processVisibleTitles();
   scheduleRefresh();
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

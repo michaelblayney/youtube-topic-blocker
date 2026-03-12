@@ -99,12 +99,19 @@ h2 {
 
 .runtime {
   margin: 14px 0 0;
-  background: var(--warning-bg);
-  color: var(--warning-text);
-  border: 1px solid var(--warning-border);
+  min-height: 0;
   border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  color: var(--warning-text);
+  line-height: 1.4;
+  padding: 0;
+}
+
+.runtime:not(:empty) {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
   padding: 8px 11px;
-  min-height: 20px;
 }
 
 .statsCard {
